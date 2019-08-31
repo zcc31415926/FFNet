@@ -6,20 +6,19 @@ import sys
 import os
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+img_path = '/home/charlie/Downloads/data_object_image_2/'
+label_path = '/home/charlie/Downloads/data_object_label_2/label_2/'
+result_2d_path = '/home/charlie/ffnet/result-test-9-11/'
 
 # 0: test / 1: train / 2: write test results
-toTrain = 2
-
-num_epoch = 60
-batch_size = 32
-learning_rate = 1e-3
-
-img_path = './kitti_data/data_object_image_2/'
-label_path = './kitti_data/data_object_label_2/label_2/'
+toTrain = 0
 
 num_train_img = 6000
-num_test_img = 1000
+num_val_img = 1000
+num_train_data = 0
+num_val_data = 0
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 class_dict = {
     'Car': 0,
@@ -35,7 +34,7 @@ class_dict = {
 target_element = [0, 3, 4, 5, 6, 7, 8, 9, 10]
 
 train_batch_pointer = 0
-PI = 3.141592654
+PI = 3.1416
 
 angle_diff_max = 30
 
@@ -74,12 +73,9 @@ def determine_average_degree(angle_array, to_display):
         cos_value = np.cos(angle_value); a_cos.append(cos_value)
         angle_value = angle_value*180/PI
         angle_value = angle_value % 360
-        # if angle_value > 180: angle_value = angle_value - 360
-        # if angle_value < -180: angle_value = 360 + angle_value
         a_value.append(angle_value)
     
-    # (in 4-bin cases)
-    # if one output has exceeding differences with the other three, remove it
+    # error excluding
     for i in range(len(a_value)):
         a_rest = []
         for j in range(len(a_value)):
@@ -105,6 +101,12 @@ def determine_average_degree(angle_array, to_display):
         # print(a_diff_value)
     return angle_value*180/PI, variance_degree
 
+def find_second_largest_element(a):
+    index = np.argmax(a)
+    a[index] = 0
+    index = np.argmax(a)
+    return a[index]
+
 # each line has 16 elements
 # 0: object class
 # 1: if truncated
@@ -122,9 +124,7 @@ def get_txt_data(filename):
         for ln in f.readlines():
             line_data = ln.strip().split(" ")[:]
             line_target_data = []
-            if line_data[0] == 'Car':
-            # if line_data[0] == 'Pedestrian':
-            # if line_data[0] == 'Cyclist':
+            if line_data[0] == 'Pedestrian':
                 for i in target_element:
                     line_target_data.append(line_data[i])
                 object_data.append(line_target_data)
@@ -141,8 +141,9 @@ def organize_train_data():
             target_img = copy.deepcopy(img[int(float(label[j][3])):int(float(label[j][5]))+1,int(float(label[j][2])):int(float(label[j][4]))+1])
             target_img = target_img.astype(np.float32)
             target_img = scipy.misc.imresize(target_img, [224, 224])
+            target_label = copy.deepcopy(label[j])
             img_epoch.append(target_img)
-            label_epoch.append(label[j])
+            label_epoch.append(target_label)
     dataset = list(zip(img_epoch, label_epoch))
     random.shuffle(dataset)
     img_epoch, label_epoch = zip(*dataset)
@@ -151,16 +152,17 @@ def organize_train_data():
 def organize_test_data():
     img_epoch = []
     label_epoch = []
-    for i in range(num_test_img):
-        seqname = str(num_train_img+i).zfill(6)
+    for i in range(num_val_img):
+        seqname = str(6000+i).zfill(6)
         img = scipy.misc.imread(img_path + 'training/image_2/' + seqname + '.png')
         label = get_txt_data(label_path + seqname + '.txt')
         for j in range(len(label)):
             target_img = copy.deepcopy(img[int(float(label[j][3])):int(float(label[j][5]))+1,int(float(label[j][2])):int(float(label[j][4]))+1])
             target_img = target_img.astype(np.float32)
             target_img = scipy.misc.imresize(target_img, [224, 224])
+            target_label = copy.deepcopy(label[j])
             img_epoch.append(target_img)
-            label_epoch.append(label[j])
+            label_epoch.append(target_label)
     dataset = list(zip(img_epoch, label_epoch))
     random.shuffle(dataset)
     img_epoch, label_epoch = zip(*dataset)
@@ -174,22 +176,29 @@ boxsize_epoch_test = []
 d_epoch_test = []
 c_epoch_test = []
 a_epoch_test = []
+a = []
 
 if toTrain == 1:
     img_epoch_train, label_epoch_train = organize_train_data()
+    num_train_data = len(label_epoch_train)
 
 if toTrain != 2:
+
     img_epoch_test, label_epoch_test = organize_test_data()
+    num_val_data = len(label_epoch_test)
+
     box_min_epoch_test = np.array([label[2:4] for label in label_epoch_test]).astype(np.float32)
     box_max_epoch_test = np.array([label[4:6] for label in label_epoch_test]).astype(np.float32)
     boxsize_epoch_test = box_max_epoch_test - box_min_epoch_test
+
     for label in label_epoch_test:
         c_epoch_test.append(generate_one_hot_list(class_dict[label[0]], 2))
         d_epoch_test.append(label[6:9])
         a_epoch_test.append([label[1]])
 
-num_train_data = len(label_epoch_train)
-num_test_data = len(label_epoch_test)
+    a = np.zeros(num_val_data)
+    for i in range(num_val_data):
+        a[i] += i
 
 
 def get_train_data(batch_size):
@@ -201,6 +210,7 @@ def get_train_data(batch_size):
         label_batch.append(label_epoch_train[i%num_train_data])
     train_batch_pointer += batch_size
 
+    box_batch = [label[2:6] for label in label_batch]
     box_min_batch = np.array([label[2:4] for label in label_batch]).astype(np.float32)
     box_max_batch = np.array([label[4:6] for label in label_batch]).astype(np.float32)
     boxsize_batch = box_max_batch - box_min_batch
@@ -210,16 +220,17 @@ def get_train_data(batch_size):
     return img_batch, boxsize_batch, d_batch, c_batch, a_batch
 
 def extract_random_test_batch(batch_size):
+    random.shuffle(a)
     img_batch = []
     boxsize_batch = []
     d_batch = []
     c_batch = []
     a_batch = []
-    index_array = random.sample(np.arange(0, num_test_data), batch_size)
-    for index in index_array:
-        img_batch.append(img_epoch_test[index])
-        boxsize_batch.append(boxsize_epoch_test[index])
-        d_batch.append(d_epoch_test[index])
-        c_batch.append(c_epoch_test[index])
-        a_batch.append(a_epoch_test[index])
+    for i in range(batch_size):
+        sample_index = int(a[i])
+        img_batch.append(img_epoch_test[sample_index])
+        boxsize_batch.append(boxsize_epoch_test[sample_index])
+        d_batch.append(d_epoch_test[sample_index])
+        c_batch.append(c_epoch_test[sample_index])
+        a_batch.append(a_epoch_test[sample_index])
     return img_batch, boxsize_batch, d_batch, c_batch, a_batch
