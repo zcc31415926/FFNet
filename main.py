@@ -32,6 +32,7 @@ boxsize = tf.placeholder(tf.float32, shape = [None, 2])
 d_label = tf.placeholder(tf.float32, shape = [None, 3])
 c_label = tf.placeholder(tf.float32, shape = [None, 2])
 a_label = tf.placeholder(tf.float32, shape = [None, 1])
+keep_prob = tf.placeholder(tf.float32, shape=None)
 
 
 def build_model():
