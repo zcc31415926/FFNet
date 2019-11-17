@@ -3,22 +3,23 @@ import random
 import numpy as np
 import copy
 import sys
-import os
 
 
-img_path = '/home/charlie/Downloads/data_object_image_2/'
-label_path = '/home/charlie/Downloads/data_object_label_2/label_2/'
-result_2d_path = '/home/charlie/ffnet/result-test-9-11/'
+img_path = '/home/speit_ie02/Data/KITTI/kitti_data/training/image_2/'
+label_path = '/home/speit_ie02/Data/KITTI/kitti_data/training/label_2/'
+# FFNet needs a 2D object detection model or 2D object detection result for KITTI evaluation
+# define your 2D object detection result here
+result_2d_path = ''
 
 # 0: test / 1: train / 2: write test results
-toTrain = 0
+toTrain = int(sys.argv[1])
 
-num_train_img = 6000
-num_val_img = 1000
+# num_train_img: total number of images for train and val (not only for training)
+num_train_img = 7481
+num_val_img = 1481
+
 num_train_data = 0
 num_val_data = 0
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 class_dict = {
     'Car': 0,
@@ -34,7 +35,7 @@ class_dict = {
 target_element = [0, 3, 4, 5, 6, 7, 8, 9, 10]
 
 train_batch_pointer = 0
-PI = 3.1416
+PI = 3.141592654
 
 angle_diff_max = 30
 
@@ -54,6 +55,7 @@ def determine_angle(sin_value, cos_value):
     elif sin_value < 0:
         return -PI - np.arcsin(sin_value)
 
+# no classification in the multi-bin mechanism
 def determine_average_degree(angle_array, to_display):
     a_value = []
     a_diff_value = []
@@ -74,8 +76,8 @@ def determine_average_degree(angle_array, to_display):
         angle_value = angle_value*180/PI
         angle_value = angle_value % 360
         a_value.append(angle_value)
-    
-    # error excluding
+
+    # error excluding algorithm
     for i in range(len(a_value)):
         a_rest = []
         for j in range(len(a_value)):
@@ -90,7 +92,7 @@ def determine_average_degree(angle_array, to_display):
                 del a_sin[i]
                 del a_cos[i]
                 break
-    
+
     variance_degree = np.var(a_value)
 
     sin_value = sum(a_sin) / len(a_sin)
@@ -134,35 +136,38 @@ def organize_train_data():
     img_epoch = []
     label_epoch = []
     for i in range(num_train_img):
-        seqname = str(i).zfill(6)
-        img = scipy.misc.imread(img_path + 'training/image_2/' + seqname + '.png')
-        label = get_txt_data(label_path + seqname + '.txt')
-        for j in range(len(label)):
-            target_img = copy.deepcopy(img[int(float(label[j][3])):int(float(label[j][5]))+1,int(float(label[j][2])):int(float(label[j][4]))+1])
-            target_img = target_img.astype(np.float32)
-            target_img = scipy.misc.imresize(target_img, [224, 224])
-            target_label = copy.deepcopy(label[j])
-            img_epoch.append(target_img)
-            label_epoch.append(target_label)
+        if i < 2000 or i > 3480:
+            seqname = str(i).zfill(6)
+            img = scipy.misc.imread(img_path + seqname + '.png')
+            label = get_txt_data(label_path + seqname + '.txt')
+            for j in range(len(label)):
+                target_img = copy.deepcopy(img[int(float(label[j][3])):int(float(label[j][5]))+1,int(float(label[j][2])):int(float(label[j][4]))+1])
+                target_img = target_img.astype(np.float32) / 255.0
+                target_img = scipy.misc.imresize(target_img, [224, 224])
+                target_label = copy.deepcopy(label[j])
+                img_epoch.append(target_img)
+                label_epoch.append(target_label)
+            print('train data', i, 'complete')
     dataset = list(zip(img_epoch, label_epoch))
     random.shuffle(dataset)
     img_epoch, label_epoch = zip(*dataset)
     return img_epoch, label_epoch
 
-def organize_test_data():
+def organize_val_data():
     img_epoch = []
     label_epoch = []
     for i in range(num_val_img):
-        seqname = str(6000+i).zfill(6)
-        img = scipy.misc.imread(img_path + 'training/image_2/' + seqname + '.png')
+        seqname = str(2000+i).zfill(6)
+        img = scipy.misc.imread(img_path + seqname + '.png')
         label = get_txt_data(label_path + seqname + '.txt')
         for j in range(len(label)):
             target_img = copy.deepcopy(img[int(float(label[j][3])):int(float(label[j][5]))+1,int(float(label[j][2])):int(float(label[j][4]))+1])
-            target_img = target_img.astype(np.float32)
+            target_img = target_img.astype(np.float32) / 255.0
             target_img = scipy.misc.imresize(target_img, [224, 224])
             target_label = copy.deepcopy(label[j])
             img_epoch.append(target_img)
             label_epoch.append(target_label)
+        print('val data', i+2000, 'complete')
     dataset = list(zip(img_epoch, label_epoch))
     random.shuffle(dataset)
     img_epoch, label_epoch = zip(*dataset)
@@ -171,30 +176,30 @@ def organize_test_data():
 
 img_epoch_train = []
 label_epoch_train = []
-img_epoch_test = []
-boxsize_epoch_test = []
-d_epoch_test = []
-c_epoch_test = []
-a_epoch_test = []
+img_epoch_val = []
+boxsize_epoch_val = []
+d_epoch_val = []
+c_epoch_val = []
+a_epoch_val = []
 a = []
 
 if toTrain == 1:
     img_epoch_train, label_epoch_train = organize_train_data()
     num_train_data = len(label_epoch_train)
 
-if toTrain != 2:
+if toTrain == 0 or toTrain == 1:
 
-    img_epoch_test, label_epoch_test = organize_test_data()
-    num_val_data = len(label_epoch_test)
+    img_epoch_val, label_epoch_val = organize_val_data()
+    num_val_data = len(label_epoch_val)
 
-    box_min_epoch_test = np.array([label[2:4] for label in label_epoch_test]).astype(np.float32)
-    box_max_epoch_test = np.array([label[4:6] for label in label_epoch_test]).astype(np.float32)
-    boxsize_epoch_test = box_max_epoch_test - box_min_epoch_test
+    box_min_epoch_val = np.array([label[2:4] for label in label_epoch_val]).astype(np.float32)
+    box_max_epoch_val = np.array([label[4:6] for label in label_epoch_val]).astype(np.float32)
+    boxsize_epoch_val = box_max_epoch_val - box_min_epoch_val
 
-    for label in label_epoch_test:
-        c_epoch_test.append(generate_one_hot_list(class_dict[label[0]], 2))
-        d_epoch_test.append(label[6:9])
-        a_epoch_test.append([label[1]])
+    for label in label_epoch_val:
+        c_epoch_val.append(generate_one_hot_list(class_dict[label[0]], 2))
+        d_epoch_val.append(label[6:9])
+        a_epoch_val.append([label[1]])
 
     a = np.zeros(num_val_data)
     for i in range(num_val_data):
@@ -205,10 +210,12 @@ def get_train_data(batch_size):
     global train_batch_pointer
     img_batch = []
     label_batch = []
-    for i in range(train_batch_pointer, train_batch_pointer + batch_size):
-        img_batch.append(img_epoch_train[i%num_train_data])
-        label_batch.append(label_epoch_train[i%num_train_data])
-    train_batch_pointer += batch_size
+    for i in range(batch_size):
+        img_batch.append(img_epoch_train[train_batch_pointer])
+        label_batch.append(label_epoch_train[train_batch_pointer])
+        train_batch_pointer += 1
+        if train_batch_pointer >= num_train_data:
+            train_batch_pointer = 0
 
     box_batch = [label[2:6] for label in label_batch]
     box_min_batch = np.array([label[2:4] for label in label_batch]).astype(np.float32)
@@ -219,7 +226,7 @@ def get_train_data(batch_size):
     a_batch = [[label[1]] for label in label_batch]
     return img_batch, boxsize_batch, d_batch, c_batch, a_batch
 
-def extract_random_test_batch(batch_size):
+def extract_random_val_batch(batch_size):
     random.shuffle(a)
     img_batch = []
     boxsize_batch = []
@@ -228,9 +235,10 @@ def extract_random_test_batch(batch_size):
     a_batch = []
     for i in range(batch_size):
         sample_index = int(a[i])
-        img_batch.append(img_epoch_test[sample_index])
-        boxsize_batch.append(boxsize_epoch_test[sample_index])
-        d_batch.append(d_epoch_test[sample_index])
-        c_batch.append(c_epoch_test[sample_index])
-        a_batch.append(a_epoch_test[sample_index])
+        img_batch.append(img_epoch_val[sample_index])
+        boxsize_batch.append(boxsize_epoch_val[sample_index])
+        d_batch.append(d_epoch_val[sample_index])
+        c_batch.append(c_epoch_val[sample_index])
+        a_batch.append(a_epoch_val[sample_index])
     return img_batch, boxsize_batch, d_batch, c_batch, a_batch
+
