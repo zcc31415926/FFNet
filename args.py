@@ -7,7 +7,7 @@ class args:
     batch_size = 32
     grad_clip = 1
     img_size = 224
-    root = '/research/d1/rshr/cczhao/Datasets/'
+    root = './Datasets/'
     results_2d_dir = './results_2d/'
     ckpt = './assets/ckpt_0.216_16_16.pth'
     device = 'cuda'
