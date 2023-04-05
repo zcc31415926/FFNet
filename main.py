@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from dataset import KITTIDataset, KITTITest
 from model import Model
-from args import args
+import args
 
 PI = 3.1415926535
 
