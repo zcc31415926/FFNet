@@ -10,7 +10,7 @@ The PyTorch implementation of our paper:
 > **Chenchen Zhao**, Yeqiang Qian, and Ming Yang. Monocular Pedestrian Orientation Estimation Based on Deep 2D-3D Feedforward. Pattern Recognition 2020 <br>
 > [[paper](https://arxiv.org/pdf/1909.10970)] [[learn more]()]
 
-We propose a test-time monocular 2D pedestrian orientation estimation model. The model receives the image features and the 2D & 3D (train-time) dimension information as inputs, and outputs the estimated orientation of each pedestrian object. The model is ranked 9/162 on [the KITTI Pedestrian Orientation Estimation Evaluation Benchmark](https://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d).
+We propose a test-time monocular 2D pedestrian orientation estimation model. The model receives the image features and the 2D & 3D (train-time) dimension information as inputs, and outputs the estimated orientation of each pedestrian object. The model is ranked 9/162 on [the KITTI Pedestrian Orientation Estimation Evaluation Benchmark](https://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d)
 
 *3.5 years later...*
 - Rewrite the code
