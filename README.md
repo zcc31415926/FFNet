@@ -20,13 +20,13 @@ Code inspired by [Deep3DBox](https://github.com/smallcorgi/3D-Deepbox)
 
 ## Usage
 
-Run `python main.py train` to train the pedestrian orientation estimation model
+Run `python main.py train` to train a model
 
-Run `python main.py val` to validate the performance of the trained model on the validation set
+Run `python main.py val` to validate the performance of the model on the validation split
 
-Run `python main.py test` to make pedestrian orientation estimations on the test set, and record the results in the format for the benchmark. Valid 2D pedestrian detection results are required
+Run `python main.py test` to test the performance on the test set, and record the results in the format for the benchmark. Valid 2D pedestrian object detection results are required
 
-> The authors appreciate the authors of [LED](https://ieeexplore.ieee.org/abstract/document/8451206?casa_token=wadAQIP5c7IAAAAA:avHNeedOveC4gDyQ0YchUi4TmSOqPyIPwSf6BJ73eY-BniHt0VQ6FiCBhEyrDqiHL3R3Zb-s6A) who provide the 2D pedestrian detection results, and use the exact results for the benchmark
+> The authors appreciate the authors of [LED](https://ieeexplore.ieee.org/abstract/document/8451206?casa_token=wadAQIP5c7IAAAAA:avHNeedOveC4gDyQ0YchUi4TmSOqPyIPwSf6BJ73eY-BniHt0VQ6FiCBhEyrDqiHL3R3Zb-s6A) who provide the 2D results, and use the exact results for the benchmark
 
 ## Performance
 
