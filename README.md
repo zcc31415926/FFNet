@@ -28,6 +28,8 @@ Run `python main.py test` to test the performance on the test set, and record th
 
 > The authors appreciate the authors of [LED](https://ieeexplore.ieee.org/abstract/document/8451206?casa_token=wadAQIP5c7IAAAAA:avHNeedOveC4gDyQ0YchUi4TmSOqPyIPwSf6BJ73eY-BniHt0VQ6FiCBhEyrDqiHL3R3Zb-s6A) who provide the 2D results, and use the exact results for the benchmark
 
+Modify `args.py` for customized experimental settings
+
 ## Performance
 
 | Model | Moderate % | Easy % | Hard % | Runtime /s | Ranking |
