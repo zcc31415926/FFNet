@@ -1,7 +1,7 @@
 # FFNet
 
 <div align="center">
-    <img src="assets/teaser.png" width="600" />
+    <img src="assets/teaser.png" width="800" />
 </div>
 
 ## Overview
