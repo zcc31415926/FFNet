@@ -20,6 +20,8 @@ Code inspired by [Deep3DBox](https://github.com/smallcorgi/3D-Deepbox)
 
 ## Usage
 
+Run `conda env create -f environment.yaml && conda activate ffnet` to create and activate a conda virtual environment named `ffnet`
+
 Run `python main.py train` to train a model
 
 Run `python main.py val` to validate the performance of the model on the validation split
